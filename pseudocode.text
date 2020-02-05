@@ -1,0 +1,23 @@
+function load user settings:
+  file is open usersettings.txt
+  lines = file.lines
+  global riskfactor = lines[0]
+  global cutloss = lines[1]
+  other settings ...
+  
+function openUrl(url):
+  
+  driver = firefox webdriver
+  driver.get(url)
+  return driver
+  
+function getData(stock url):
+
+  openUrl(stock url)
+
+  buyPrice = driver.find_element(buy_price)
+  sellPrice = driver.find_element(sell_price)
+  high = driver.find_element(high)
+  low = driver.find_element(low)
+  change = driver.find_element(change)
+  status = driver.find_element(status)
