@@ -51,7 +51,7 @@ function addData(name, newData):
   
   data[name] = stock
   file = open(filename, 'w')
-  json.dump(datastore, file)
+  json.dump(data, file)
   file.close
 
 function watchedStocks():
@@ -61,15 +61,56 @@ function watchedStocks():
   file.close
   return stocks
 
+function buyStock(currentData, name, strategyNum):
+
+  file = open("transations", "r")
+  data = json.load(file)
+  file.close
+  data[name] = {'Type': 'Buy, ''Date': currentTime, 'Strategy': strategyNum,
+      'Sell price': currentData[sellPrice], 'Buy price': currentData[buyPrice], 'Change': currentData[change]}
+  print(data[name])
+  
+  file = open(filename, 'w')
+  json.dump(data, file)
+  file.close
+
+function quickSell():
+  
+  file = open("transations", "r")
+  data = json.load(file)
+  file.close
+    
+  for key in data:
+    currentData = getData(key)
+    if currentData[sellPrice] > key[buyPrice] * (1 + riskfactor/1000):
+      print("Sold for prifit")
+      print(key[buyPrice], "-", currentData[sellPrice], "=", key[buyPrice]-currentData[sellPrice])
+    else currentData[sellPrice] < key[sellPrice] * (1 - cutloss/1000):
+      print("Sold to cut loss")
+      print(key[buyPrice], "-", currentData[sellPrice], "=", key[buyPrice]-currentData[sellPrice])
+      
+  data[name] = {'Type': 'Sell, ''Date': currentTime, 'Strategy': 'Quick sell',
+      'Sell price': currentData[sellPrice], 'Buy price': currentData[buyPrice], 'Change': currentData[change]}
+  print(data[name])
+  
+  file = open(filename, 'w')
+  json.dump(data, file)
+  file.close
+
+
+# on a upwards trend, if theres a quick downwards spike then buy
 function strategyOne():
   
   stocks = watchedStocks()
   
-  for stockName in stocks[0]:
+  for i in range(len(stocks)):
   
+    previousData = getPreviousData(stocks[i][name])
+    currentData = getData(stocks[i][url])
   
-  previousData = getPreviousData(name)
-  currentData = getData(stock url)
-  
-  
+    if len(previousData) > 2 and previousData[change] > 1%:
+      if previousData[sellPrice][-3] > previousData[sellPrice][-2] and previousData[sellPrice][-1]:
+        
+        buyStock(currentData, stocks[name], 1)
+    
   
