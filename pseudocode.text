@@ -1,4 +1,5 @@
 function load user settings:
+
   file is open usersettings.txt
   lines = file.lines
   global riskfactor = lines[0]
@@ -13,7 +14,7 @@ function openUrl(url):
   
 function getData(stock url):
 
-  openUrl(stock url)
+  driver = openUrl(stock url)
 
   buyPrice = driver.find_element(buy_price)
   sellPrice = driver.find_element(sell_price)
@@ -21,3 +22,54 @@ function getData(stock url):
   low = driver.find_element(low)
   change = driver.find_element(change)
   status = driver.find_element(status)
+
+  currentData = [buyPrice, sellPrice, high, low, change, status]
+  return currentData
+  
+function getPreviousData(name):
+  
+  file = open("stockdata", "r")
+  data = json.load(file)
+  stock = data[name]
+  previousData = [stock[dates], stock[buyPrice], stock[sellPrice], stock[high], stock[low], stock[change], stock[status]]
+  return previousData
+  
+function addData(name, newData):
+
+  file = open("stockdata", "r")
+  data = json.load(file)
+  file.close
+  stock = data[name]
+  
+  stock[dates] = stock[dates].append(currentTime)
+  stock[buyPrice] = stock[buyPrice].append(newData[buyPrice])
+  stock[sellPrice] = stock[sellPrice].append(newData[sellPrice])
+  stock[high] = stock[high].append(newData[high])
+  stock[low] = stock[low].append(newData[low])
+  stock[change] = stock[change].append(newData[change])
+  stock[status] = stock[status].append(newData[status])
+  
+  data[name] = stock
+  file = open(filename, 'w')
+  json.dump(datastore, file)
+  file.close
+
+function watchedStocks():
+  
+  file = open("watchedStocks.txt", "r")
+  stocks = file.readlines
+  file.close
+  return stocks
+
+function strategyOne():
+  
+  stocks = watchedStocks()
+  
+  for stockName in stocks[0]:
+  
+  
+  previousData = getPreviousData(name)
+  currentData = getData(stock url)
+  
+  
+  
