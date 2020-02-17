@@ -1,0 +1,4 @@
+riskFactor: 3
+cutLoss: 13
+minSpend: 1000
+maxSpend: 5000
