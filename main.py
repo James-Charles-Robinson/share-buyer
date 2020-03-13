@@ -90,16 +90,27 @@ def watchedStocks():
     file.close()
     return stocks
 
-def buyStock(currentData, name, strategyNum, url, money, userSettings):
+def getMoney():
+    file = open("money.txt", "r")
+    money = (round(float(file.readlines()[-1].replace("\n", "")) * 10)/10)
+    file.close()
+    return money
 
+def getTransactions():
     file = open("transactions.txt", "r")
     data = json.load(file)
     file.close()
+    return data
+
+def buyStock(currentData, name, strategyNum, url, userSettings):
+
+    data = getTransactions()
+    money = getMoney()
 
     exsisting = False
 
     for key, value in data.items():
-        if value["Name"] == name and value["Active"] == True:
+        if value["Name"] == name and value["Active"] == "true":
             exsisting = True
             print("Exsists", name)
 
@@ -112,7 +123,7 @@ def buyStock(currentData, name, strategyNum, url, money, userSettings):
         data[title] = {'Name': name, "URL": url, 'Date': str(time), 'Strategy': strategyNum,
             'Sell price': currentData[4], 'Buy price': currentData[0],
             'Change': currentData[1], "Quantity": quantity, "Prior Acc Bal": money,
-            "Active": True, "Sell Data": {}}
+            "Active": "true", "Sell Data": {}}
 
         print(data[title])
         money = round((money - (currentData[0] * quantity))*10) / 10
@@ -125,22 +136,20 @@ def buyStock(currentData, name, strategyNum, url, money, userSettings):
         json.dump(data, file)
         file.close()
         
-    return money
 
 def clearStockData():
     file = open("stockdata.txt", "w")
     file.write("{}")
     file.close()
 
-def sellAll(money, driver):
+def sellAll(driver):
 
-    file = open("transactions.txt", "r")
-    data = json.load(file)
-    file.close()
+    data = getTransactions()
+    money = getMoney()
 
     for key, value in data.items():
 
-        if value["Active"] == True:
+        if value["Active"] == "true":
 
             time = datetime.datetime.now()
 
@@ -149,7 +158,7 @@ def sellAll(money, driver):
             currentData = getData(driver)
 
             print("Sold", value["Quantity"], value["Name"])
-            profit = (value["Buy price"]-currentData[4]) * value["Quantity"]
+            profit = (currentData[4]-value["Buy price"]) * value["Quantity"]
             print("profit =", profit)
             money = round((money + (currentData[4] * value["Quantity"]))*10)/10
 
@@ -162,6 +171,7 @@ def sellAll(money, driver):
 
             print(data[key]["Sell Data"])
             data[key]["Active"] = "false"
+            print(data[key]["Active"])
 
             file = open("money.txt", "a")
             file.write(str(money) + "\n")
@@ -171,17 +181,16 @@ def sellAll(money, driver):
     file = open("transactions.txt", "w")
     json.dump(data, file)
     file.close()
-    return money
    
-def quickSell(money, driver, userSettings):
+def quickSell(driver, userSettings):
 
-    file = open("transactions.txt", "r")
-    data = json.load(file)
-    file.close()
+    data = getTransactions()
+    money = getMoney()
 
     for key, value in data.items():
+        print(value["Name"], value["Active"])
 
-        if value["Active"] == True:
+        if value["Active"] == "true":
 
             time = datetime.datetime.now()
             riskFactor = userSettings[0]
@@ -190,11 +199,13 @@ def quickSell(money, driver, userSettings):
             driver.get(value["URL"])
             driver.implicitly_wait(5)
             currentData = getData(driver)
-            if (currentData[4] > (value["Buy price"] * (1 + riskFactor/2000)) or
+            previousData = getPreviousData(value["Name"])
+            if ((currentData[4] > (value["Buy price"] * (1 + riskFactor/2000)) and
+                averageChange(previousData[2], -3, -1) < 0.00004) or
                 currentData[4] < (value["Buy price"] * (1 - cutLoss/500))):
 
                 print("Sold", value["Quantity"], value["Name"])
-                profit = (value["Buy price"]-currentData[4]) * value["Quantity"]
+                profit = (currentData[4]-value["Buy price"]) * value["Quantity"]
                 print("profit =", profit)
                 money = round((money + (currentData[4] * value["Quantity"]))*10)/10
 
@@ -207,6 +218,7 @@ def quickSell(money, driver, userSettings):
 
                 print(data[key]["Sell Data"])
                 data[key]["Active"] = "false"
+                print(data[key]["Active"])
 
                 file = open("money.txt", "a")
                 file.write(str(money) + "\n")
@@ -216,7 +228,6 @@ def quickSell(money, driver, userSettings):
     file = open("transactions.txt", "w")
     json.dump(data, file)
     file.close()
-    return money
 
 def averageChange(lst, frm, to):
 
@@ -236,10 +247,11 @@ def medianChange(lst, frm, to):
     print("median", median)
     return median
 
-def strategy(money, userSettings):
+def strategy(userSettings):
 
     stocks = watchedStocks()
     driver = webdriver.Firefox()
+    money = getMoney()
 
     for i in range(len(stocks)):
         try:
@@ -261,14 +273,14 @@ def strategy(money, userSettings):
                         if (averageChange(previousData[2], -9, -4) < -0.0001 and averageChange(previousData[2], -3, -1) > 0.00014):
                             if (medianChange(previousData[2], -9, -4) < -0.0006 and medianChange(previousData[2], -3, -1) > 0.0006):
 
-                                money = buyStock(currentData, name, 1, url, money, userSettings)
+                                buyStock(currentData, name, 1, url, userSettings)
 
                     # if its consistantly going up
                     if len(previousData[0]) > 10 and currentData[1] > 0.2:
                         if (averageChange(previousData[2], -9, -5) > 0.0001 and averageChange(previousData[2], -5, -1) > 0.00014):
                             if (medianChange(previousData[2], -9, -1) > 0.0006):
 
-                                money = buyStock(currentData, name, 2, url, money, userSettings)
+                                buyStock(currentData, name, 2, url, userSettings)
 
                 addData(stocks[i].split(",")[0], currentData)
             else:
@@ -276,21 +288,17 @@ def strategy(money, userSettings):
                 time.sleep(20)
         except:
             pass
-
-    money = quickSell(money, driver, userSettings)
+    try:
+        quickSell(driver, userSettings)
+    except Exception as e:
+        print(e)
     #sellAll(money, driver)
     driver.close()
 
-#clearStockData()
+clearStockData()
 userSettings = userSettings()
 
 while True:
-
-    file = open("money.txt", "r")
-    money = (round(float(file.readlines()[-1].replace("\n", "")) * 10)/10)
-    file.close()
     
-    money = strategy(money, userSettings)
+    strategy(userSettings)
     print("Loop done")
-
-
